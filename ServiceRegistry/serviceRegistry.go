@@ -7,18 +7,29 @@ import (
 	"sort"
 )
 
-const PORT = "1234"
+const REG_PORT = "1234"
 
 const NUM_PEERS = 1024
 
-var peerList = make([]string, 0, NUM_PEERS)
+type PeerInfo struct {
+	Uid  string
+	Ip   string
+	Port string
+}
 
-type ServiceRegistry string
+var peerList = make([]PeerInfo, 0, NUM_PEERS)
 
-func (t *ServiceRegistry) Join(newPeerID string, succ *string) error {
-	*succ = newPeerID                      //Ritorno il valore del successore
-	peerList = append(peerList, newPeerID) //Aggiungo il nuovo peer e riordino la lista
-	sort.Strings(peerList)
+type ServiceRegistry PeerInfo
+
+func (t *ServiceRegistry) Join(newPeerInfo *PeerInfo, succ *PeerInfo) error {
+
+	*succ = *newPeerInfo                      //Ritorno il valore del successore
+	peerList = append(peerList, *newPeerInfo) //Aggiungo il nuovo peer e riordino la lista
+
+	sort.Slice(peerList, func(i, j int) bool { //Ordino la lista di peerInfo per uid
+		return peerList[i].Uid < peerList[j].Uid
+	})
+
 	return nil
 }
 
@@ -27,7 +38,7 @@ func main() {
 	serviceRegistry := new(ServiceRegistry)
 	rpc.Register(serviceRegistry)
 	rpc.HandleHTTP()
-	err := http.ListenAndServe(":"+PORT, nil)
+	err := http.ListenAndServe(":"+REG_PORT, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
