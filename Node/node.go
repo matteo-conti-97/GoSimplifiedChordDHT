@@ -51,8 +51,12 @@ func main() {
 	if err != nil {
 		log.Fatal("arith error:", err)
 	}
-	fmt.Printf("PeerID: Sended %s Received %s", peer.Uid, reply.Uid)
-	fmt.Printf("PeerID: Sended %s Received %s", peer.Ip, reply.Ip)
-	fmt.Printf("PeerID: Sended %s Received %s", peer.Port, reply.Port)
+	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Uid, reply.Uid)
+	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Ip, reply.Ip)
+	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Port, reply.Port)
+
+	for {
+
+	}
 
 }

@@ -21,12 +21,28 @@ var peerList = make([]PeerInfo, 0, NUM_PEERS)
 
 type ServiceRegistry PeerInfo
 
+func findSuccessor(peer PeerInfo, peerList []PeerInfo) PeerInfo {
+	if len(peerList) == 0 {
+		return peer
+	}
+
+	for _, v := range peerList {
+		if v.Uid > peer.Uid {
+			return v
+		}
+	}
+	return peerList[0]
+}
+
 func (t *ServiceRegistry) Join(newPeerInfo *PeerInfo, succ *PeerInfo) error {
 
-	*succ = *newPeerInfo                      //Ritorno il valore del successore
-	peerList = append(peerList, *newPeerInfo) //Aggiungo il nuovo peer e riordino la lista
+	//Ricerca e ritorno del successpre
+	*succ = findSuccessor(*newPeerInfo, peerList)
 
-	sort.Slice(peerList, func(i, j int) bool { //Ordino la lista di peerInfo per uid
+	//Aggiungo il nuovo peer e riordino la lista per uid
+	peerList = append(peerList, *newPeerInfo)
+
+	sort.Slice(peerList, func(i, j int) bool {
 		return peerList[i].Uid < peerList[j].Uid
 	})
 
