@@ -14,6 +14,7 @@ import (
 
 const REG_ADDR = "127.0.0.1"
 const REG_PORT = "1234"
+const ADDR = "127.0.0.1"
 
 type PeerInfo struct {
 	Uid  string
@@ -21,8 +22,8 @@ type PeerInfo struct {
 	Port string
 }
 
+// Uid generation
 func getUid() string {
-	//Id generation
 	rand.Seed(time.Now().UnixNano())
 	var pid = strconv.Itoa(os.Getpid())
 	var salt = strconv.Itoa(rand.Int())
@@ -30,15 +31,22 @@ func getUid() string {
 	return hex.EncodeToString(hash[:])[:10]
 }
 
-func getPeerInfo() *PeerInfo {
-	p := PeerInfo{Uid: getUid(), Ip: REG_ADDR, Port: "Prova"}
+func getPeerInfo(addr string, port string) *PeerInfo {
+	p := PeerInfo{Uid: getUid(), Ip: addr, Port: port}
 	return &p
 }
 
 func main() {
 	fmt.Println("hello world client")
+	if len(os.Args) < 2 {
+		log.Fatal("Missing argument, usage-> go run node.go portNum")
+	}
+	var port, _ = strconv.Atoi(os.Args[1])
+	if port <= 1024 {
+		log.Fatal("Invalid port error")
+	}
 
-	var peer *PeerInfo = getPeerInfo()
+	var peer *PeerInfo = getPeerInfo(ADDR, os.Args[1])
 
 	client, err := rpc.DialHTTP("tcp", REG_ADDR+":"+REG_PORT)
 	if err != nil {
@@ -46,17 +54,19 @@ func main() {
 	}
 
 	// Synchronous call to service registry
-	var reply PeerInfo
-	err = client.Call("ServiceRegistry.Join", peer, &reply)
+	var succ PeerInfo
+	err = client.Call("ServiceRegistry.Join", peer, &succ)
 	if err != nil {
-		log.Fatal("arith error:", err)
+		log.Fatal("Join error:", err)
 	}
-	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Uid, reply.Uid)
-	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Ip, reply.Ip)
-	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Port, reply.Port)
-
+	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Uid, succ.Uid)
+	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Ip, succ.Ip)
+	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Port, succ.Port)
+	//1TODO CONTATTARE IL SUCCESSORE E PRENDERE LE CHIAVI DI CUI CI SI DEVE OCCUPARE (CLIENT DI 2)
+	//2TODO LANCIARE LA GOROUTINE PER ASCOLTARE LE RICHIESTE DI NUOVI PREDECESSORI E PASSARGLI LE CHIAVI (SERVER DI 1)
+	//3TODO LANCIARE LA GOROUTINE PER ASCOLTARE RICHIESTE DI RISORSE ED EVENTUALMENTE FARE ROUTING
 	for {
-
+		//TODO MENU CLIENT PER FARE PUT O GET DI RISORSE ED EVENTUALMENTE INIZIARE IL ROUTING
 	}
 
 }
