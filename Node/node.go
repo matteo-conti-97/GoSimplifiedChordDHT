@@ -9,6 +9,7 @@ import (
 	"net/rpc"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -37,6 +38,14 @@ func getPeerInfo(addr string, port string) *PeerInfo {
 }
 
 func main() {
+
+	// Keys managed from the node with associated mutex for thread shared access
+	//https://notes.shichao.io/gopl/ch9/ vedi qui per continuare
+	var (
+		mux  sync.Mutex
+		keys string
+	)
+
 	fmt.Println("hello world client")
 	if len(os.Args) < 2 {
 		log.Fatal("Missing argument, usage-> go run node.go portNum")
