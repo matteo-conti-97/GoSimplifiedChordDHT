@@ -1,7 +1,12 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"encoding/hex"
+)
 
 func main() {
-	fmt.Println("hello world")
+	var succIdHex,_=hex.Decode([]byte("AASD08924X"))
+	var currIdHex,_=hex.Decode([]byte("AASD08924Z"))
+	fmt.Println("La distanza é %d",hex.Encode(succIdHex[]-currIdHex[]))
 }

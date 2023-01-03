@@ -5,17 +5,16 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/rpc"
 	"os"
 	"strconv"
 	"sync"
-	"time"
 )
 
 const REG_ADDR = "127.0.0.1"
 const REG_PORT = "1234"
 const ADDR = "127.0.0.1"
+const UID_DIM = 10
 
 type PeerInfo struct {
 	Uid  string
@@ -23,28 +22,28 @@ type PeerInfo struct {
 	Port string
 }
 
+type ManagedKeys struct {
+	mux  sync.Mutex
+	keys []string
+}
+
 // Uid generation
-func getUid() string {
-	rand.Seed(time.Now().UnixNano())
-	var pid = strconv.Itoa(os.Getpid())
-	var salt = strconv.Itoa(rand.Int())
-	var hash = md5.Sum([]byte(pid + salt))
+func getUid(port string) string {
+	var hash = md5.Sum([]byte(ADDR + port))
 	return hex.EncodeToString(hash[:])[:10]
 }
 
 func getPeerInfo(addr string, port string) *PeerInfo {
-	p := PeerInfo{Uid: getUid(), Ip: addr, Port: port}
+	p := PeerInfo{Uid: getUid(port), Ip: addr, Port: port}
 	return &p
 }
 
 func main() {
 
-	// Keys managed from the node with associated mutex for thread shared access
+	//List of node managed keys with associated mutex for thread shared access
 	//https://notes.shichao.io/gopl/ch9/ vedi qui per continuare
-	var (
-		mux  sync.Mutex
-		keys string
-	)
+	//https://stackoverflow.com/questions/73859360/lock-slice-before-reading-and-modifying-it
+	var managedKeys ManagedKeys
 
 	fmt.Println("hello world client")
 	if len(os.Args) < 2 {
