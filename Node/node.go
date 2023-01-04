@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"sort"
 	"strconv"
 	"sync"
 )
@@ -38,12 +39,42 @@ func getPeerInfo(addr string, port string) *PeerInfo {
 	return &p
 }
 
+type Peer []string
+
+func (t *Peer) Join(newPeerUid string, keys *[]string) error {
+	var ret []string
+	managedKeys.mux.Lock()
+	defer managedKeys.mux.Unlock()
+	for _, v := range managedKeys.keys {
+		if newPeerUid > v {
+			ret = append(ret, v)
+		}
+	}
+
+	//Sort delle managed keys, FORSE INUTILE
+	sort.Slice(managedKeys.keys, func(i, j int) bool {
+		return managedKeys.keys[i] < managedKeys.keys[j]
+	})
+	managedKeys.mux.Unlock()
+
+	//Sort del ret
+	sort.Slice(ret, func(i, j int) bool {
+		return ret[i] < ret[j]
+	})
+
+	//Insert keys to send in return buffer
+	*keys = ret
+
+	return nil
+}
+
+var managedKeys ManagedKeys
+
 func main() {
 
 	//List of node managed keys with associated mutex for thread shared access
 	//https://notes.shichao.io/gopl/ch9/ vedi qui per continuare
 	//https://stackoverflow.com/questions/73859360/lock-slice-before-reading-and-modifying-it
-	var managedKeys ManagedKeys
 
 	fmt.Println("hello world client")
 	if len(os.Args) < 2 {

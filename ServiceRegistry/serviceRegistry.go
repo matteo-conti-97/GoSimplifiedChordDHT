@@ -19,8 +19,6 @@ type PeerInfo struct {
 
 var peerList = make([]PeerInfo, 0, NUM_PEERS)
 
-type ServiceRegistry PeerInfo
-
 func findSuccessor(peer PeerInfo, peerList []PeerInfo) PeerInfo {
 	if len(peerList) == 0 {
 		return peer
@@ -33,6 +31,9 @@ func findSuccessor(peer PeerInfo, peerList []PeerInfo) PeerInfo {
 	}
 	return peerList[0]
 }
+
+// RPC, return to the joining node his successor
+type ServiceRegistry PeerInfo
 
 func (t *ServiceRegistry) Join(newPeerInfo *PeerInfo, succ *PeerInfo) error {
 
