@@ -4,18 +4,26 @@ import (
 	"fmt"
 )
 
+func RemoveIndex(s []string, index int) []string {
+	ret := make([]string, 0)
+	ret = append(ret, s[:index]...)
+	return append(ret, s[index+1:]...)
+}
+
 func main() {
-	var set = make(map[string]int)
-	set["11"] = 1
-	set["44"] = 4
-	set["22"] = 2
-	set["33"] = 3
-	set["55"] = 5
-	set["66"] = 6
-	fmt.Println(set)
-	delete(set, "11")
-	fmt.Println(set["Bob"])
+	set := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}
+	var ret []string
+	var temp []string
 	for _, v := range set {
-		fmt.Println(v)
+		if "4" >= v {
+			ret = append(ret, v)
+		} else {
+			temp = append(temp, v)
+		}
 	}
+
+	fmt.Println(set)
+	set = temp
+	fmt.Println(set)
+	fmt.Println(ret)
 }

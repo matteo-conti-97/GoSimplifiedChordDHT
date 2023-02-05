@@ -41,20 +41,27 @@ func getPeerInfo(addr string, port string) *PeerInfo {
 
 type Peer []string
 
-func (t *Peer) Join(newPeerUid string, keys *[]string) error {
+func (t *Peer) GetSuccRes(newPeerUid string, keys *[]string) error {
 	var ret []string
+	var temp []string
 	managedKeys.mux.Lock()
 	defer managedKeys.mux.Unlock()
-	for _, v := range managedKeys.keys {
-		if newPeerUid > v {
-			ret = append(ret, v)
-		}
-	}
 
 	//Sort delle managed keys, FORSE INUTILE
 	sort.Slice(managedKeys.keys, func(i, j int) bool {
 		return managedKeys.keys[i] < managedKeys.keys[j]
 	})
+
+	//Select of resources with Uid<PeerUid
+	for _, v := range managedKeys.keys {
+		if newPeerUid > v {
+			ret = append(ret, v) //res to return to new peer
+		} else {
+			temp = append(temp, v) //res remaining to successor
+		}
+	}
+
+	managedKeys.keys = temp
 	managedKeys.mux.Unlock()
 
 	//Sort del ret
@@ -94,9 +101,9 @@ func main() {
 
 	// Synchronous call to service registry
 	var succ PeerInfo
-	err = client.Call("ServiceRegistry.Join", peer, &succ)
+	err = client.Call("ServiceRegistry.GetSuccRes", peer, &succ)
 	if err != nil {
-		log.Fatal("Join error:", err)
+		log.Fatal("GetSuccRes error:", err)
 	}
 	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Uid, succ.Uid)
 	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Ip, succ.Ip)
