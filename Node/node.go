@@ -31,7 +31,7 @@ type ManagedKeys struct {
 // Uid generation
 func getUid(port string) string {
 	var hash = md5.Sum([]byte(ADDR + port))
-	return hex.EncodeToString(hash[:])[:10]
+	return hex.EncodeToString(hash[:])[:UID_DIM] //TODO Forse lo lascio intero
 }
 
 func getPeerInfo(addr string, port string) *PeerInfo {
@@ -94,21 +94,39 @@ func main() {
 
 	var peer *PeerInfo = getPeerInfo(ADDR, os.Args[1])
 
-	client, err := rpc.DialHTTP("tcp", REG_ADDR+":"+REG_PORT)
+	//Dial to service registry
+	serviceRegistry, err := rpc.DialHTTP("tcp", REG_ADDR+":"+REG_PORT)
 	if err != nil {
 		log.Fatal("dialing:", err)
 	}
 
 	// Synchronous call to service registry
-	var succ PeerInfo
-	err = client.Call("ServiceRegistry.GetSuccRes", peer, &succ)
+	var succInfo PeerInfo
+	err = serviceRegistry.Call("ServiceRegistry.Join", peer, &succInfo)
+	if err != nil {
+		log.Fatal("Join error:", err)
+	}
+
+	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Uid, succInfo.Uid)
+	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Ip, succInfo.Ip)
+	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Port, succInfo.Port)
+
+	//1TODO CONTATTARE IL SUCCESSORE E PRENDERE LE CHIAVI DI CUI CI SI DEVE OCCUPARE (CLIENT DI 2)
+
+	//Dial to successor
+	succ, err := rpc.DialHTTP("tcp", succInfo.Ip+":"+succInfo.Port)
+	if err != nil {
+		log.Fatal("dialing:", err)
+	}
+
+	managedKeys.mux.Lock()
+	// Synchronous call to service successor
+	err = succ.Call("Peer.GetSuccRes", peer.Uid, managedKeys.keys)
 	if err != nil {
 		log.Fatal("GetSuccRes error:", err)
 	}
-	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Uid, succ.Uid)
-	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Ip, succ.Ip)
-	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Port, succ.Port)
-	//1TODO CONTATTARE IL SUCCESSORE E PRENDERE LE CHIAVI DI CUI CI SI DEVE OCCUPARE (CLIENT DI 2)
+	managedKeys.mux.Unlock()
+
 	//2TODO LANCIARE LA GOROUTINE PER ASCOLTARE LE RICHIESTE DI NUOVI PREDECESSORI E PASSARGLI LE CHIAVI (SERVER DI 1)
 	//3TODO LANCIARE LA GOROUTINE PER ASCOLTARE RICHIESTE DI RISORSE ED EVENTUALMENTE FARE ROUTING
 	for {

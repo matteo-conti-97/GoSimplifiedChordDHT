@@ -9,15 +9,13 @@ import (
 
 const REG_PORT = "1234"
 
-const NUM_PEERS = 1024
-
 type PeerInfo struct {
 	Uid  string
 	Ip   string
 	Port string
 }
 
-var peerList = make([]PeerInfo, 0, NUM_PEERS)
+var peerList = make([]PeerInfo, 0)
 
 func findSuccessor(peer PeerInfo, peerList []PeerInfo) PeerInfo {
 	if len(peerList) == 0 {
