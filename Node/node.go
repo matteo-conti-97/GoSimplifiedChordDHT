@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"net/http"
 	"net/rpc"
 	"os"
 	"sort"
@@ -28,6 +29,17 @@ type ManagedKeys struct {
 	keys []string
 }
 
+func peerServer(peerInfo *PeerInfo) {
+	fmt.Println("Started peerServer goroutine")
+	peerServer := new(Peer)
+	rpc.Register(peerServer)
+	rpc.HandleHTTP()
+	err := http.ListenAndServe(":"+peerInfo.Port, nil)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+}
+
 // Uid generation
 func getUid(port string) string {
 	var hash = md5.Sum([]byte(ADDR + port))
@@ -44,10 +56,9 @@ type Peer []string
 func (t *Peer) GetSuccRes(newPeerUid string, keys *[]string) error {
 	var ret []string
 	var temp []string
-	managedKeys.mux.Lock()
-	defer managedKeys.mux.Unlock()
 
-	//Sort delle managed keys, FORSE INUTILE
+	managedKeys.mux.Lock()
+	//Sort delle managed keys
 	sort.Slice(managedKeys.keys, func(i, j int) bool {
 		return managedKeys.keys[i] < managedKeys.keys[j]
 	})
@@ -55,7 +66,7 @@ func (t *Peer) GetSuccRes(newPeerUid string, keys *[]string) error {
 	//Select of resources with Uid<PeerUid
 	for _, v := range managedKeys.keys {
 		if newPeerUid > v {
-			ret = append(ret, v) //res to return to new peer
+			ret = append(ret, v) //res to return to new peerInfo
 		} else {
 			temp = append(temp, v) //res remaining to successor
 		}
@@ -63,11 +74,6 @@ func (t *Peer) GetSuccRes(newPeerUid string, keys *[]string) error {
 
 	managedKeys.keys = temp
 	managedKeys.mux.Unlock()
-
-	//Sort del ret
-	sort.Slice(ret, func(i, j int) bool {
-		return ret[i] < ret[j]
-	})
 
 	//Insert keys to send in return buffer
 	*keys = ret
@@ -85,14 +91,14 @@ func main() {
 
 	fmt.Println("hello world client")
 	if len(os.Args) < 2 {
-		log.Fatal("Missing argument, usage-> go run node.go portNum")
+		log.Fatal("Missing argument, usage-> go run node.go portNum, port 1234 reserved for service registry")
 	}
 	var port, _ = strconv.Atoi(os.Args[1])
 	if port <= 1024 {
 		log.Fatal("Invalid port error")
 	}
 
-	var peer *PeerInfo = getPeerInfo(ADDR, os.Args[1])
+	var peerInfo *PeerInfo = getPeerInfo(ADDR, os.Args[1])
 
 	//Dial to service registry
 	serviceRegistry, err := rpc.DialHTTP("tcp", REG_ADDR+":"+REG_PORT)
@@ -102,33 +108,38 @@ func main() {
 
 	// Synchronous call to service registry
 	var succInfo PeerInfo
-	err = serviceRegistry.Call("ServiceRegistry.Join", peer, &succInfo)
+	err = serviceRegistry.Call("ServiceRegistry.Join", peerInfo, &succInfo)
 	if err != nil {
 		log.Fatal("Join error:", err)
 	}
 
-	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Uid, succInfo.Uid)
-	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Ip, succInfo.Ip)
-	fmt.Printf("PeerID: Sended %s Received %s\n", peer.Port, succInfo.Port)
+	fmt.Printf("PeerID: Sended %s Received %s\n", peerInfo.Uid, succInfo.Uid)
+	fmt.Printf("PeerID: Sended %s Received %s\n", peerInfo.Ip, succInfo.Ip)
+	fmt.Printf("PeerID: Sended %s Received %s\n", peerInfo.Port, succInfo.Port)
 
 	//1TODO CONTATTARE IL SUCCESSORE E PRENDERE LE CHIAVI DI CUI CI SI DEVE OCCUPARE (CLIENT DI 2)
 
-	//Dial to successor
-	succ, err := rpc.DialHTTP("tcp", succInfo.Ip+":"+succInfo.Port)
-	if err != nil {
-		log.Fatal("dialing:", err)
-	}
+	//If there is a successor
+	if succInfo.Uid != peerInfo.Uid {
+		//Dial to successor
+		succ, err := rpc.DialHTTP("tcp", succInfo.Ip+":"+succInfo.Port)
+		if err != nil {
+			log.Fatal("dialing:", err)
+		}
 
-	managedKeys.mux.Lock()
-	// Synchronous call to service successor
-	err = succ.Call("Peer.GetSuccRes", peer.Uid, managedKeys.keys)
-	if err != nil {
-		log.Fatal("GetSuccRes error:", err)
+		managedKeys.mux.Lock()
+		// Synchronous call to service successor
+		err = succ.Call("Peer.GetSuccRes", peerInfo.Uid, &managedKeys.keys)
+		if err != nil {
+			log.Fatal("GetSuccRes error:", err)
+		}
+		managedKeys.mux.Unlock()
 	}
-	managedKeys.mux.Unlock()
 
 	//2TODO LANCIARE LA GOROUTINE PER ASCOLTARE LE RICHIESTE DI NUOVI PREDECESSORI E PASSARGLI LE CHIAVI (SERVER DI 1)
-	//3TODO LANCIARE LA GOROUTINE PER ASCOLTARE RICHIESTE DI RISORSE ED EVENTUALMENTE FARE ROUTING
+	peerServer(peerInfo)
+	fmt.Println("Code after the go routine launch")
+	//3TODO LANCIARE LA GOROUTINE PER ASCOLTARE RICHIESTE DI RISORSE ED EVENTUALMENTE FARE ROUTING, ~~~~~~~~~~~~~POSSIBILE CHE SIA INCLUSO IN 2~~~~~~~~~~
 	for {
 		//TODO MENU CLIENT PER FARE PUT O GET DI RISORSE ED EVENTUALMENTE INIZIARE IL ROUTING
 	}

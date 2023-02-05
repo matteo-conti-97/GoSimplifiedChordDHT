@@ -50,8 +50,10 @@ func (t *ServiceRegistry) Join(newPeerInfo *PeerInfo, succ *PeerInfo) error {
 
 func main() {
 	fmt.Println("hello world server")
-	serviceRegistry := new(ServiceRegistry)
-	rpc.Register(serviceRegistry)
+
+	//Listen di nuovi nodi
+	serviceRegistryServer := new(ServiceRegistry)
+	rpc.Register(serviceRegistryServer)
 	rpc.HandleHTTP()
 	err := http.ListenAndServe(":"+REG_PORT, nil)
 	if err != nil {
